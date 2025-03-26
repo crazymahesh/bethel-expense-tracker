@@ -1,11 +1,10 @@
 export interface Expenses {
-  totalAmount: number
+  //totalAmount: number
   expenses: Expense[]
 }
 
 export interface Expense {
   _id: string
-  user: string
   month: string
   overallMaintenance: number
   securitySalary: number
