@@ -1,6 +1,9 @@
-# Bethel Expense Tracker
+# Bethel Expense Tracker 
 
 This is a full-stack expense tracker application built with Node.js for the backend and Angular for the frontend. It allows users to sign up, log in, add, edit, delete, and filter expenses by date and category.
+
+# Author
+Mahesh Amirthalingam [https://github.com/crazymahesh]
 
 ## Table of Contents
 
@@ -11,11 +14,9 @@ This is a full-stack expense tracker application built with Node.js for the back
 - [Running the Application](#running-the-application)
 - [API Endpoints](#api-endpoints)
 - [Usage](#usage)
-- [License](#license)
 
 ## Features
 
-- User authentication with JWT
 - Landing page
 - Add, edit, delete, and view expenses
 - Filter expenses by date range and category
