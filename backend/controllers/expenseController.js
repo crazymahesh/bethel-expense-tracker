@@ -1,0 +1,149 @@
+const Expense = require('../models/expense');
+
+exports.addExpense = async (req, res) => {
+    const {  overallMaintenance,
+        totalExpenseAmount,
+        month,
+        securitySalary,
+        securityAdvance,
+        commonEB,
+        cleaningAccessories,
+        garbageMan,
+        dieselGenset,
+        cctvRecharge,
+        comments,
+        createdDate } = req.body;
+    try {
+        const expense = new Expense({
+            //user: req.user.id,
+            overallMaintenance,
+            totalExpenseAmount,
+            month,
+            securitySalary,
+            securityAdvance,
+            commonEB,
+            cleaningAccessories,
+            garbageMan,
+            dieselGenset,
+            cctvRecharge,
+            comments,
+            createdDate,
+           });
+        await expense.save();
+        res.json(expense);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.getExpenses = async (req, res) => {
+    const { startDate, endDate, period } = req.query;
+   const filter = { id: req._id };
+    const now = new Date();
+    let start, end;
+
+    if (period) {
+        switch (period) {
+            case 'week':
+                start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1)); // Start of the week (Monday)
+                end = endDate ? new Date(endDate) : new Date(now.getFullYear(), now.getMonth(), now.getDate() + (7 - now.getDay())); // End of the week (Sunday)
+                end.setDate(end.getDate() + 6); // End of the week (Sunday)
+                break;
+            case 'month':
+                start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1); // Start of the month
+                end = endDate ? new Date(endDate) : new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of the month
+                break;
+            case '3months':
+                start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth() - 2, 1); // Start of the 3 months period
+                end = endDate ? new Date(endDate) : new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of the month
+                break;
+            case '6months':
+                start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth() - 5, 1); // Start of the 6 months period
+                end = endDate ? new Date(endDate) : new Date(now.getFullYear(), now.getMonth() + 1, 0); // End of the month
+                break;
+            case 'custom':
+                if (startDate && endDate) {
+                    start = new Date(startDate);
+                    end = new Date(endDate);
+                } else {
+                    return res.status(400).json({ message: 'Please provide startDate and endDate for custom period' });
+                }
+                break;
+            default:
+                return res.status(400).json({ message: 'Invalid period. Choose from week, month, 3months, or custom.' });
+        }
+    }
+
+    if (start && end) {
+        filter.date = { $gte: start, $lte: end };
+    }
+
+    try {
+        const expenses = await Expense.find(filter).sort({ date: -1 }); // Sort by date in descending order
+        //const totalAmount = expenses.reduce((acc, expense) => acc + expense.securitySalary + expense.securityAdvance + expense.commonEB + expense.cleaningAccessories + expense.garbageMan + expense.dieselGenset + expense.cctvRecharge, 0); 
+        res.json({  expenses });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.getExpense = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const expense = await Expense.findById(id);
+        if (!expense) {
+            return res.status(404).json({ message: 'Expense not found' });
+        }
+        res.json(expense);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.updateExpense = async (req, res) => {
+    const { id } = req.params;
+    const { overallMaintenance,
+        totalExpenseAmount,
+        month,
+        securitySalary,
+        securityAdvance,
+        commonEB,
+        cleaningAccessories,
+        garbageMan,
+        dieselGenset,
+        cctvRecharge,
+        comments,
+        createdDate } = req.body;
+    try {
+        const expense = await Expense.findByIdAndUpdate(
+            id,
+            { overallMaintenance,
+                totalExpenseAmount,
+                month,
+                securitySalary,
+                securityAdvance,
+                commonEB,
+                cleaningAccessories,
+                garbageMan,
+                dieselGenset,
+                cctvRecharge,
+                comments,
+                createdDate },
+            { new: true }
+        );
+        res.json(expense);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.deleteExpense = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await Expense.findByIdAndDelete(id);
+        res.json({ message: 'Expense removed' });
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
