@@ -8,6 +8,7 @@ export interface Expense {
   month: string
   overallMaintenance: number
   totalExpenseAmount: number
+  balanceAmount: number
   securitySalary: number
   securityAdvance: number
   commonEB: number

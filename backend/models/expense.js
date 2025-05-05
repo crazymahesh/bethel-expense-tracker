@@ -19,6 +19,9 @@ const ExpenseSchema = new mongoose.Schema({
         type: Number,
         
     },
+    balanceAmount: {
+        type: Number,
+    },
     securitySalary: {
         type: Number,
         

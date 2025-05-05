@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { ExpenseService } from '../../core/services/expense.service';
 import {
@@ -7,16 +7,37 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import {
+  NgApexchartsModule,
+  ApexNonAxisChartSeries,
+  ApexPlotOptions,
+  ApexChart,
+  ApexLegend,
+  ApexResponsive,
+  ChartComponent
+} from "ng-apexcharts";
 import { DatePipe, NgClass } from '@angular/common';
 import { Expense } from '../../core/models/expense.model';
 import { Subject, takeUntil } from 'rxjs';
+export type ChartOptions = {
+  series: ApexNonAxisChartSeries;
+  chart: ApexChart;
+  labels: string[];
+  colors: string[];
+  legend: ApexLegend;
+  plotOptions: ApexPlotOptions;
+  responsive: ApexResponsive | ApexResponsive[];
+};
 @Component({
   selector: 'app-list-expenses',
-  imports: [ReactiveFormsModule, DatePipe],
+  imports: [ReactiveFormsModule, NgApexchartsModule],
   templateUrl: './list-expenses.component.html',
   styleUrl: './list-expenses.component.scss',
 })
+
 export class ListExpensesComponent implements OnInit {
+  @ViewChild("chart") chart!: ChartComponent;
+  public chartOptions: Partial<ChartOptions>;
   filterForm: FormGroup;
   expenses = signal<Expense[]>([]);
   filter = signal<string>('');
@@ -39,19 +60,100 @@ export class ListExpensesComponent implements OnInit {
   expenseService = inject(ExpenseService);
   router = inject(Router);
   fb = inject(FormBuilder);
-
+  months: string[] = ['Jan-2024', 'Feb-2024', 'Mar-2024', 'Apr-2024', 'May-2024', 'Jun-2024', 'Jul-2024', 'Aug-2024', 'Sep-2024', 'Oct-2024', 'Nov-2024', 'Dec-2024', 'Jan-2025', 'Feb-2025', 'Mar-2025', 'Apr-2025', 'May-2025', 'Jun-2025', 'Jul-2025', 'Aug-2025', 'Sep-2025', 'Oct-2025', 'Nov-2025', 'Dec-2025', 'Jan-2026', 'Feb-2026', 'Mar-2026', 'Apr-2026', 'May-2026', 'Jun-2026', 'Jul-2026', 'Aug-2026', 'Sep-2026', 'Oct-2026', 'Nov-2026', 'Dec-2026', 'Jan-2027', 'Feb-2027', 'Mar-2027', 'Apr-2027', 'May-2027', 'Jun-2027', 'Jul-2027', 'Aug-2027', 'Sep-2027', 'Oct-2027', 'Nov-2027', 'Dec-2027', 'Jan-2028', 'Feb-2028', 'Mar-2028', 'Apr-2028', 'May-2028', 'Jun-2028', 'Jul-2028', 'Aug-2028', 'Sep-2028', 'Oct-2028', 'Nov-2028', 'Dec-2028']
+  currentMonthExpenses = {
+    overallMaintenance: 0,
+    totalExpenseAmount:0,
+    balanceAmount: 0,
+    securitySalary: 0,
+    securityAdvance: 0,
+    commonEB: 0,
+    cleaningAccessories: 0,
+    garbageMan: 0,
+    dieselGenset: 0,
+    cctvRecharge: 0
+  }
   constructor() {
+
+    this.chartOptions = {
+      series: [76, 67, 61, 90],
+      chart: {
+        height: 390,
+        type: "radialBar"
+      },
+      plotOptions: {
+        radialBar: {
+          offsetY: 0,
+          startAngle: 0,
+          endAngle: 270,
+          hollow: {
+            margin: 5,
+            size: "30%",
+            background: "transparent",
+            image: undefined
+          },
+          dataLabels: {
+            name: {
+              show: false
+            },
+            value: {
+              show: false
+            }
+          }
+        }
+      },
+      colors: ["#1ab7ea", "#0084ff", "#39539E", "#0077B5"],
+      labels: ["Vimeo", "Messenger", "Facebook", "LinkedIn"],
+      legend: {
+        show: true,
+        floating: true,
+        fontSize: "16px",
+        position: "left",
+        offsetX: 50,
+        offsetY: 10,
+        labels: {
+          useSeriesColors: true
+        },
+        formatter: function(seriesName, opts) {
+          return seriesName + ":  " + opts.w.globals.series[opts.seriesIndex];
+        },
+        itemMargin: {
+          horizontal: 3
+        }
+      },
+      responsive: [
+        {
+          breakpoint: 480,
+          options: {
+            legend: {
+              show: false
+            }
+          }
+        }
+      ]
+    };
+
     this.filterForm = this.fb.group({
       filter: [''],
       startDate: ['', [Validators.required]],
       endDate: ['', [Validators.required]],
     });
+
+    
+
   }
 
   ngOnInit() {
     this.getExpenses();
   }
+  getCurrentMonthYear(): string {
+    const date = new Date();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[date.getMonth()]; // Get current month name
+    const year = date.getFullYear(); // Get current year
 
+    return `${month}-${year}`; // Format: 'Mar-2024'
+  }
   getExpenses(params: any = {}) {
     this.isLoading.set(true);
     this.expenseService
@@ -63,9 +165,12 @@ export class ListExpensesComponent implements OnInit {
           //this.totalAmount.set(res.totalAmount);
           
           // Calculate current month total
-          const now = new Date();
-          const currentMonth = now.getMonth();
-          const currentYear = now.getFullYear();
+          console.log(this.getCurrentMonthYear());
+          let filterByMonth = res.expenses.filter((expense:any) => {
+            return (expense.month === this.getCurrentMonthYear())
+          })
+          this.currentMonthExpenses = {...filterByMonth};
+          console.log(this.currentMonthExpenses);
           
           // this.currentMonthTotal = res.expenses
           //   .filter((expense: Expense) => {

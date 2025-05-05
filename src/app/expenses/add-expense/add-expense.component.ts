@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
+  AbstractControl,
   FormControl,
   FormGroup,
   ReactiveFormsModule,
@@ -8,16 +9,37 @@ import {
 } from '@angular/forms';
 import { ExpenseService } from '../../core/services/expense.service';
 import { BehaviorSubject } from 'rxjs';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe,CurrencyPipe } from '@angular/common';
+import { InputMaskModule } from '@ngneat/input-mask';
+import { createMask } from '@ngneat/input-mask';
 
 @Component({
     selector: 'app-add-expense',
-    imports: [ReactiveFormsModule, RouterLink, AsyncPipe],
+    imports: [ReactiveFormsModule, RouterLink, AsyncPipe,CurrencyPipe, InputMaskModule],
     templateUrl: './add-expense.component.html',
     styleUrl: './add-expense.component.scss'
 })
 export class AddExpenseComponent implements OnInit {
   expenseForm: FormGroup = new FormGroup({});
+  currencyInputMask = createMask({
+    alias: 'numeric',
+    groupSeparator: ',',
+    digits: 2,
+    digitsOptional: false,
+    prefix: '₹ ',
+    allowMinus:false,
+    placeholder: '0',
+  });
+  currencyAdvanceInputMask = createMask({
+    alias: 'numeric',
+    groupSeparator: ',',
+    digits: 2,
+    max: 12000,
+    digitsOptional: false,
+    allowMinus:false,
+    prefix: '₹ ',
+    placeholder: '0',
+  });
   categories: string[] = [
     'Groceries',
     'Leisure',
@@ -32,17 +54,24 @@ export class AddExpenseComponent implements OnInit {
 
   expenseService = inject(ExpenseService);
   router = inject(Router);
-
-  constructor() {}
-
+  totalSum: number = 0;
+  balanceAmt: number = 0;
+  constructor() {
+   
+  }
+  customMaxValidator(maxValue: number) {
+    return (control: AbstractControl) => {
+      return control.value > maxValue ? { maxError: `Cannot exceed ${maxValue}` } : null;
+    };
+  }
   ngOnInit() {
     this.expenseForm = new FormGroup({
       comments: new FormControl('', [
         //Validators.required,
-        Validators.minLength(3),
+        //Validators.minLength(3),
       ]),
-      month: new FormControl('', Validators.required),
-      overallMaintenance: new FormControl('',),
+      month: new FormControl(this.getCurrentMonthYear(), Validators.required),
+      overallMaintenance: new FormControl('',[]),
       securitySalary: new FormControl('', []),
       securityAdvance: new FormControl('', [ Validators.min(0)]),
       commonEB: new FormControl('', [ Validators.min(0)]),
@@ -55,8 +84,28 @@ export class AddExpenseComponent implements OnInit {
         Validators.required
       ),
     });
-  }
+    setTimeout(() => {
+      this.expenseForm.patchValue({
+        overallMaintenance: 22500,
+        securitySalary: 12000
+      });
+      
+    });
 
+    this.expenseForm.valueChanges.subscribe((values: any) => {
+      this.calculateSum(values);
+    });
+    
+    
+  }
+  getCurrentMonthYear(): string {
+    const date = new Date();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[date.getMonth()]; // Get current month name
+    const year = date.getFullYear(); // Get current year
+
+    return `${month}-${year}`; // Format: 'Mar-2024'
+  }
   get comments() {
     return this.expenseForm.get('comments');
   }
@@ -105,23 +154,28 @@ export class AddExpenseComponent implements OnInit {
     this.expenseForm.get('month')?.reset();
   }
 
+  
+
   onSubmit() {
     if (this.expenseForm.invalid) {
       return;
     }
+    
     const expense = {
-      overallMaintenance: this.expenseForm.value.overallMaintenance,
-      totalExpenseAmount: 0,
+      overallMaintenance: parseFloat(this.expenseForm.value.overallMaintenance),
+      totalExpenseAmount: this.totalSum,
+      balanceAmount: this.balanceAmt,
       securitySalary: this.expenseForm.value.securitySalary,
-      securityAdvance: this.expenseForm.value.securityAdvance,
-      commonEB: this.expenseForm.value.commonEB,
-      cleaningAccessories: this.expenseForm.value.cleaningAccessories,
-      garbageMan: this.expenseForm.value.garbageMan,
-      dieselGenset: this.expenseForm.value.dieselGenset,
-      cctvRecharge: this.expenseForm.value.cctvRecharge,
+      securityAdvance: (parseFloat(this.expenseForm.value.securityAdvance.replace(/[₹,\s]/g, '')) || 0),
+      commonEB: (parseFloat(this.expenseForm.value.commonEB.replace(/[₹,\s]/g, '')) || 0),
+      cleaningAccessories: (parseFloat(this.expenseForm.value.cleaningAccessories.replace(/[₹,\s]/g, '')) || 0),
+      garbageMan: (parseFloat(this.expenseForm.value.garbageMan.replace(/[₹,\s]/g, '')) || 0),
+      dieselGenset: (parseFloat(this.expenseForm.value.dieselGenset.replace(/[₹,\s]/g, '')) || 0),
+      cctvRecharge: (parseFloat(this.expenseForm.value.cctvRecharge.replace(/[₹,\s]/g, '')) || 0),
       month: this.expenseForm.value.month,
       createdDate: new Date(this.expenseForm.value.createdDate).toISOString(),
     };
+    console.log(expense);
     this.expenseService.addExpense(expense).subscribe({
       next: (res) => {
         this.router.navigate(['/']);
@@ -132,4 +186,33 @@ export class AddExpenseComponent implements OnInit {
       },
     });
   }
+
+  securityAdvanceCalc($event:Event) {
+    this.expenseForm.patchValue({
+      "securitySalary": 12000
+    })
+    let advanceAmtValue = ($event.target as HTMLInputElement).value;
+    let securitySal = this.expenseForm.controls['securitySalary'].value;
+    let finalSecuritySal = (securitySal - (parseFloat(advanceAmtValue.replace(/[₹,\s]/g, ''))));
+    this.expenseForm.patchValue({
+      "securitySalary": finalSecuritySal
+    })
+  }
+
+  
+
+  calculateSum(values: any) {
+    const totalExpenseAmt =
+      (parseFloat(values.securitySalary) || 0) +
+      (parseFloat(values.commonEB.replace(/[₹,\s]/g, '')) || 0) +
+      (parseFloat(values.dieselGenset.replace(/[₹,\s]/g, '')) || 0) +
+      (parseFloat(values.garbageMan.replace(/[₹,\s]/g, '')) || 0) +
+      (parseFloat(values.cleaningAccessories.replace(/[₹,\s]/g, '')) || 0);
+      setTimeout(() => {
+        this.balanceAmt = (parseFloat(values.overallMaintenance)) - (totalExpenseAmt);
+        this.totalSum = totalExpenseAmt;
+      });  
+  }
+
+    
 }

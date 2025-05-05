@@ -3,6 +3,7 @@ const Expense = require('../models/expense');
 exports.addExpense = async (req, res) => {
     const {  overallMaintenance,
         totalExpenseAmount,
+        balanceAmount,
         month,
         securitySalary,
         securityAdvance,
@@ -18,6 +19,7 @@ exports.addExpense = async (req, res) => {
             //user: req.user.id,
             overallMaintenance,
             totalExpenseAmount,
+            balanceAmount,
             month,
             securitySalary,
             securityAdvance,
@@ -105,6 +107,7 @@ exports.updateExpense = async (req, res) => {
     const { id } = req.params;
     const { overallMaintenance,
         totalExpenseAmount,
+        balanceAmount,
         month,
         securitySalary,
         securityAdvance,
@@ -120,6 +123,7 @@ exports.updateExpense = async (req, res) => {
             id,
             { overallMaintenance,
                 totalExpenseAmount,
+                balanceAmount,
                 month,
                 securitySalary,
                 securityAdvance,

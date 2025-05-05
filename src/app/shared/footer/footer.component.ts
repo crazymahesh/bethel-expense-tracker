@@ -4,7 +4,7 @@ import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-footer',
-  imports: [RouterLink],
+  imports: [],
   templateUrl: './footer.component.html',
   styleUrl: './footer.component.scss',
 })
