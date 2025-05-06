@@ -4,16 +4,29 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
+const helmet = require("helmet");
 const setupSwagger = require('./swagger');
 const authRoutes = require('./routes/auth');
 const expenseRoutes = require('./routes/expense');
 
 require("dotenv").config();
 
+// Validate environment variables
+const validateEnv = require('./config/validateEnv');
+validateEnv();
+
 const app = express();
+
+// Only trust proxies in production
+if (process.env.NODE_ENV === "production") {
+  app.set('trust proxy', 1);
+}
 
 // Connect to MongoDB
 connectDB();
+
+// Security headers middleware
+app.use(helmet());
 
 app.use(
   cors({
@@ -29,7 +42,9 @@ setupSwagger(app);
 // Configure rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100
+    max: 100, // 100 requests per IP
+    standardHeaders: true,
+    message: { message: "Too many requests, please try again later" }
 });
 
 app.use("/api/", limiter);
